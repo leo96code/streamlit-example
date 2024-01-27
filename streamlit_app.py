@@ -22,9 +22,10 @@ if uploaded_file is not None:
         try:
             img_bytes = uploaded_file.getvalue()
 
-            # Perform inference
-            response = model.predict(img_bytes, confidence=40, overlap=30).json()
+            # Perform inference (adjust according to the actual API requirements)
+            response = model.predict(img_bytes, confidence=40).json()
             
+            # Assuming the response contains a URL to the processed image
             processed_image_url = response['processed_image_url']
             response = requests.get(processed_image_url)
             processed_image = Image.open(BytesIO(response.content))
