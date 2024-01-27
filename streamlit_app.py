@@ -5,44 +5,49 @@ from PIL import Image
 import requests
 from io import BytesIO
 import numpy as np
+from roboflow import Roboflow
 
 
-# Initialize Roboflow
+
 rf = Roboflow(api_key="AtAN7fsWbxIN9Moql1gJ")
 project = rf.workspace().project("mb-yellow-mosaic")
 model = project.version("3").model
 
 st.title('Image Processing with Roboflow')
 
-uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
-
-def display_segmentation(original, mask, class_map):
-    # This function is a placeholder.
-    # You need to implement the actual overlay or side-by-side display logic.
-    st.image(original, caption='Original Image', use_column_width=True)
-    st.image(mask, caption='Segmentation Mask', use_column_width=True)
-
+uploaded_file = st.file_uploader("Upload an image...", type=["jpg", "jpeg", "png"])
 if uploaded_file is not None:
-    image = Image.open(uploaded_file)
+    # Read and display the uploaded image
+    image = Image.open(uploaded_file).convert("RGBA")
     st.image(image, caption='Uploaded Image', use_column_width=True)
-
+    
+    # When the button is pressed
     if st.button('Process Image'):
+        # Save the uploaded file to a temporary file
+        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(uploaded_file.name)[1]) as tmp_file:
+            tmp_file.write(uploaded_file.getvalue())
+            tmp_file_path = tmp_file.name
+        
         try:
-            img_bytes = uploaded_file.getvalue()
-
-            # Perform inference
-            response = model.predict(img_bytes, confidence=40).json()
+            # Call the Roboflow API (replace this with the correct call as per your Roboflow API)
+            response = model.predict(tmp_file_path, confidence=40).json()
             
-            # Process the response
-            segmentation_mask = response['segmentation_mask']
-            decoded = base64.b64decode(segmentation_mask)
-            mask_image = Image.open(BytesIO(decoded))
-
-            class_map = response['class_map']
-            # Here, you can map class IDs to class names using class_map if needed
-
-            # Display the original image and segmentation mask
-            display_segmentation(image, mask_image, class_map)
-
+            # Remove the temporary file
+            os.unlink(tmp_file_path)
+            
+            # Decode the base64-encoded segmentation mask
+            segmentation_mask_data = base64.b64decode(response['predictions']['segmentation_mask'])
+            segmentation_mask = Image.open(BytesIO(segmentation_mask_data)).convert("L")
+            
+            # Prepare the overlay
+            overlay_image = Image.new("RGBA", image.size)
+            overlay_image.putalpha(segmentation_mask)
+            
+            # Overlay the mask on the original image
+            combined_image = Image.alpha_composite(image, overlay_image)
+            
+            # Display the combined image
+            st.image(combined_image, caption='Processed Image', use_column_width=True)
+            
         except Exception as e:
             st.error(f"An error occurred: {e}")
