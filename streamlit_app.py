@@ -1,40 +1,27 @@
-import altair as alt
-import numpy as np
-import pandas as pd
 import streamlit as st
+from roboflow import Roboflow
+from PIL import Image
+import requests
+from io import BytesIO
 
-"""
-# Welcome to Streamlit!
+# Initialize Roboflow
+rf = Roboflow(api_key="YOUR_ROBOFLOW_API_KEY")
+project = rf.workspace().project("YOUR_PROJECT_NAME")
+model = project.version("YOUR_VERSION").model
 
-Edit `/streamlit_app.py` to customize this app to your heart's desire :heart:.
-If you have any questions, checkout our [documentation](https://docs.streamlit.io) and [community
-forums](https://discuss.streamlit.io).
+st.title('Image Processing with Roboflow')
 
-In the meantime, below is an example of what you can do with just a few lines of code:
-"""
+uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
+if uploaded_file is not None:
+    image = Image.open(uploaded_file)
+    st.image(image, caption='Uploaded Image', use_column_width=True)
 
-num_points = st.slider("Number of points in spiral", 1, 10000, 1100)
-num_turns = st.slider("Number of turns in spiral", 1, 300, 31)
+    if st.button('Process Image'):
+        # TODO: Modify this part to suit the Roboflow model prediction
+        result = model.predict(uploaded_file, confidence=40, overlap=30).json()
+        
+        # Assuming the result contains a URL to the processed image
+        response = requests.get(result['processed_image_url'])
+        processed_image = Image.open(BytesIO(response.content))
 
-indices = np.linspace(0, 1, num_points)
-theta = 2 * np.pi * num_turns * indices
-radius = indices
-
-x = radius * np.cos(theta)
-y = radius * np.sin(theta)
-
-df = pd.DataFrame({
-    "x": x,
-    "y": y,
-    "idx": indices,
-    "rand": np.random.randn(num_points),
-})
-
-st.altair_chart(alt.Chart(df, height=700, width=700)
-    .mark_point(filled=True)
-    .encode(
-        x=alt.X("x", axis=None),
-        y=alt.Y("y", axis=None),
-        color=alt.Color("idx", legend=None, scale=alt.Scale()),
-        size=alt.Size("rand", legend=None, scale=alt.Scale(range=[1, 150])),
-    ))
+        st.image(processed_image, caption='Processed Image', use_column_width=True)
