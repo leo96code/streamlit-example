@@ -1,3 +1,7 @@
 pandas
 streamlit
 pillow
+streamlit
+torch
+torchvision
+requests
