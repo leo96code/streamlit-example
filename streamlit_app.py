@@ -1,6 +1,7 @@
 import streamlit as st
 from PIL import Image
 from ultralytics import YOLO
+import cv2
 
 # Function to load and process the image
 def load_image(image_file):
