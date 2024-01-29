@@ -2,15 +2,28 @@ import streamlit as st
 from PIL import Image
 import io
 import torch
+from torch import hub
 import requests
-from torchvision import transforms
+import tempfile
 
-# Function to load model from the given URL
+# Function to download and load model from a direct URL
 @st.cache(allow_output_mutation=True)
 def load_model(model_url):
-    # Assuming the model is in PyTorch format
-    model = torch.hub.load('ultralytics/yolov8', 'custom', path_or_model='https://github.com/leo96code/streamlit-example/blob/master/models/last.pt')
-    return model
+    # GitHub raw content URL for direct download
+    # Replace 'blob' with 'raw' in the provided GitHub URL
+    raw_model_url = model_url.replace('github.com', 'raw.githubusercontent.com').replace('/blob/', '/')
+
+    # Download the model file from the URL
+    r = requests.get(raw_model_url, allow_redirects=True)
+    if r.status_code == 200:
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pt') as tmp_model_file:
+            tmp_model_file.write(r.content)
+            tmp_model_file.flush()
+            # Load the model using PyTorch
+            model = torch.hub.load('ultralytics/yolov8', 'custom', path_or_model=tmp_model_file.name)
+            return model
+    else:
+        raise Exception(f"Failed to download the model, status code: {r.status_code}")
 
 # Set up the main layout
 col1, col2 = st.columns(2)
@@ -30,7 +43,10 @@ with col1:
         # When the user clicks the 'Process' button
         if st.button('Process'):
             # Load the model
-            model = load_model('https://github.com/leo96code/streamlit-example/blob/master/models/last.pt')
+            model = load_model('https://github.com/leo96code/streamlit-example/blob/57caeea14280d4a0404931480d158bd82d0830ad/models/last.pt')
+            # Convert PIL image to RGB if not already in RGB mode
+            if image.mode != 'RGB':
+                image = image.convert('RGB')
             # Perform inference
             results = model(image)
             # Convert results to image
